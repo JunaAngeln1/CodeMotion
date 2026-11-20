@@ -4,7 +4,7 @@ import { useRobotStore } from "@/store/robotStore";
 import { interpretProgram } from "@/engine/interpreter";
 import type { BlockInstruction, Direction } from "@/types";
 
-interface UseProgramRunnerProps {
+export interface UseProgramRunnerProps {
   level: {
     gridSize: number;
     obstacles: { x: number; y: number }[];
@@ -12,7 +12,7 @@ interface UseProgramRunnerProps {
     goalY: number;
     startX: number;
     startY: number;
-    startDirection: string;
+    startDirection: Direction;
   };
   program: BlockInstruction[];
   onComplete: (won: boolean) => void;
@@ -23,103 +23,102 @@ export const useProgramRunner = ({
   program,
   onComplete,
 }: UseProgramRunnerProps) => {
-  const { status, setStatus, currentStep, setCurrentStep } = useProgramStore();
-  const { setRobot, robot } = useRobotStore();
-  const generatorRef = useRef<Generator<any> | null>(null);
-  const runningRef = useRef(false);
+  // Only execution status should subscribe this hook to store updates.
+  const status = useProgramStore((state) => state.status);
+  const inputsRef = useRef({ program, level, onComplete });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const resetRobot = useCallback(() => {
-    setRobot({
-      x: level.startX,
-      y: level.startY,
-      direction: level.startDirection as Direction,
-      targetX: level.startX,
-      targetY: level.startY,
-    });
-  }, [level, setRobot]);
+  useEffect(() => {
+    inputsRef.current = { program, level, onComplete };
+  }, [program, level, onComplete]);
+
+  // Effect cleanup must not publish store updates.
+  const stopInterval = useCallback(() => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
   const stop = useCallback(() => {
-    runningRef.current = false;
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = null;
-    generatorRef.current = null;
-    setStatus("idle");
-  }, [setStatus]);
+    stopInterval();
+    const state = useProgramStore.getState();
+    if (state.status === "running") state.setStatus("stopped");
+  }, [stopInterval]);
 
-  const runStep = useCallback(() => {
-    if (!generatorRef.current) return;
-    const result = generatorRef.current.next();
-    if (result.done) {
-      stop();
-      const won = robot.x === level.goalX && robot.y === level.goalY;
-      onComplete(won);
+  const { gridSize, startX, startY, startDirection, goalX, goalY } = level;
+
+  useEffect(() => {
+    if (status !== "running") return;
+
+    // Capture the program at start. Parent renders and callback identity changes
+    // must not reset the robot or replace the active generator.
+    const inputs = inputsRef.current;
+    if (inputs.program.length === 0) {
+      useProgramStore.getState().setStatus("idle");
       return;
     }
-    const step = result.value;
-    setCurrentStep(currentStep + 1);
 
-    switch (step.kind) {
-      case "turn":
-        setRobot({
-          ...robot,
-          direction: step.direction,
-          targetX: robot.x,
-          targetY: robot.y,
-        });
-        break;
-      case "move":
-        setRobot({
-          ...robot,
-          x: step.x,
-          y: step.y,
-          targetX: step.x,
-          targetY: step.y,
-        });
-        break;
-      case "goal":
-        stop();
-        onComplete(true);
-        return;
-      case "obstacle":
-        stop();
-        onComplete(false);
-        return;
-      case "done":
-        stop();
-        onComplete(step.won);
-        return;
-    }
-  }, [level, robot, robot.x, robot.y, setRobot, setStatus, setCurrentStep, onComplete, stop]);
+    const start = {
+      x: startX, y: startY, direction: startDirection,
+      targetX: startX, targetY: startY,
+    };
+    useRobotStore.getState().setRobot(start);
+    useProgramStore.getState().setCurrentStep(0);
+    const generator = interpretProgram({
+      program: structuredClone(inputs.program),
+      gridSize,
+      obstacles: inputs.level.obstacles,
+      goalX, goalY, start, stepDelayMs: 600,
+    });
+    let cancelled = false;
 
-  useEffect(() => {
-    return () => stop();
-  }, [stop]);
+    const finish = (won: boolean) => {
+      if (cancelled) return;
+      cancelled = true;
+      stopInterval();
+      useProgramStore.getState().setStatus(won ? "completed" : "failed");
+      inputsRef.current.onComplete(won);
+    };
 
-  useEffect(() => {
-    if (status === "running" && !runningRef.current && program.length > 0) {
-      runningRef.current = true;
-      resetRobot();
-      generatorRef.current = interpretProgram({
-        program,
-        gridSize: level.gridSize,
-        obstacles: level.obstacles,
-        goalX: level.goalX,
-        goalY: level.goalY,
-        start: {
-          x: level.startX,
-          y: level.startY,
-            direction: level.startDirection as Direction,
-          targetX: level.startX,
-          targetY: level.startY,
-        },
-          stepDelayMs: 600,
-      });
-      intervalRef.current = setInterval(runStep, 600);
-    } else if (status !== "running") {
-      stop();
-    }
-  }, [status, program.length, runStep, resetRobot, stop]);
+    intervalRef.current = setInterval(() => {
+      if (cancelled || useProgramStore.getState().status !== "running") {
+        stopInterval();
+        return;
+      }
+      const result = generator.next();
+      const { robot, setRobot } = useRobotStore.getState();
+      if (result.done) {
+        finish(robot.x === goalX && robot.y === goalY);
+        return;
+      }
+      const state = useProgramStore.getState();
+      state.setCurrentStep(state.currentStep + 1);
+      const step = result.value;
+      switch (step.kind) {
+        case "turn":
+          setRobot({ ...robot, direction: step.direction });
+          break;
+        case "move":
+          setRobot({ ...robot, x: step.x, y: step.y, targetX: step.x, targetY: step.y });
+          break;
+        case "goal":
+          finish(true);
+          break;
+        case "obstacle":
+          finish(false);
+          break;
+        case "done":
+          finish(step.won);
+          break;
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      stopInterval();
+    };
+  }, [status, gridSize, startX, startY, startDirection, goalX, goalY, stopInterval]);
 
   return { stop };
 };

@@ -7,7 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", children, disabled, ...props }, ref) => {
     const base =
-      "inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none";
+      "inline-flex min-h-11 items-center justify-center gap-2 font-semibold rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none";
     const variants: Record<string, string> = {
       primary:
         "px-5 py-2.5 bg-electric-500 text-slate-900 shadow-glow hover:scale-105 active:scale-95",

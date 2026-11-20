@@ -1,52 +1,33 @@
 import { useProgramStore } from "@/store/programStore";
 import { Button } from "@/components/ui/Button";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Square, RotateCcw } from "lucide-react";
+import type { ExecutionStatus } from "@/types";
 
-export const EditorToolbar = () => {
+const STATUS_LABELS: Record<ExecutionStatus, string> = {
+  idle: "Listo para programar", running: "Ejecutando…", completed: "Meta alcanzada",
+  failed: "Inténtalo de nuevo", stopped: "Ejecución detenida",
+};
+
+export const EditorToolbar = ({ onReset }: { onReset?: () => void }) => {
   const { status, setStatus, program, resetProgram } = useProgramStore();
-
   const isRunning = status === "running";
-
-  const handleExecute = () => setStatus("running");
-  const handleStop = () => setStatus("idle");
-  const handleReset = () => {
-    setStatus("idle");
-    resetProgram();
-  };
-
   return (
-    <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-          Programa
-        </span>
-        <span className={`text-xs px-2 py-1 rounded-full ${
-          status === "running"
-            ? "bg-green-500/20 text-green-400 animate-pulse"
-            : status === "completed"
-              ? "bg-green-500/20 text-green-400"
-              : status === "failed"
-                ? "bg-red-500/20 text-red-400"
-                : "bg-slate-700 text-slate-500"
-        }`}>
-          {status}
-        </span>
+    <footer className="lab-toolbar" aria-label="Controles del programa">
+      <div className="lab-status" role="status">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${isRunning ? "animate-pulse bg-green-400" : "bg-electric-400"}`} />
+        <span>{STATUS_LABELS[status]}</span>
       </div>
-      <div className="flex gap-2">
-        <Button variant="ghost" onClick={handleReset} disabled={isRunning}>
-          <RotateCcw className="w-4 h-4" /> Reiniciar
+      <div className="lab-actions">
+        <Button variant="ghost" onClick={onReset ?? resetProgram} disabled={isRunning} data-gesture-click>
+          <RotateCcw size={18} className="shrink-0" /><span>Reiniciar</span>
         </Button>
-        <Button variant="danger" onClick={handleStop} disabled={!isRunning}>
-          <Pause className="w-4 h-4" /> Detener
+        <Button variant="danger" onClick={() => setStatus("stopped")} disabled={!isRunning} data-gesture-click>
+          <Square size={16} className="shrink-0" /><span>Detener</span>
         </Button>
-        <Button
-          variant="primary"
-          onClick={handleExecute}
-          disabled={isRunning || program.length === 0}
-        >
-          <Play className="w-4 h-4" /> Ejecutar
+        <Button variant="primary" onClick={() => setStatus("running")} disabled={isRunning || program.length === 0} data-gesture-click>
+          <Play size={18} className="shrink-0" /><span>Ejecutar</span>
         </Button>
       </div>
-    </div>
+    </footer>
   );
 };

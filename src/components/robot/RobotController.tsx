@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Box, Sphere, Cylinder } from "@react-three/drei";
@@ -12,22 +12,25 @@ const DIRECTION_TO_ROTATION: Record<Direction, number> = {
   west: -Math.PI / 2,
 };
 
-export const RobotController = () => {
+export const RobotController = ({ gridSize = 6 }: { gridSize?: number }) => {
   const { robot } = useRobotStore();
   const meshRef = useRef<THREE.Group>(null);
+  const [initialPosition] = useState<[number, number, number]>(() => [
+    robot.x - gridSize / 2 + 0.5, 0.16, -(robot.y - gridSize / 2 + 0.5),
+  ]);
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
     const targetRot = DIRECTION_TO_ROTATION[robot.direction];
     meshRef.current.rotation.y += (targetRot - meshRef.current.rotation.y) * delta * 6;
-    const targetX = robot.x - 2.5;
-    const targetZ = -(robot.y - 2.5);
+    const targetX = robot.x - gridSize / 2 + 0.5;
+    const targetZ = -(robot.y - gridSize / 2 + 0.5);
     meshRef.current.position.x += (targetX - meshRef.current.position.x) * delta * 6;
     meshRef.current.position.z += (targetZ - meshRef.current.position.z) * delta * 6;
   });
 
   return (
-    <group ref={meshRef}>
+    <group ref={meshRef} position={initialPosition}>
       <Robot />
     </group>
   );

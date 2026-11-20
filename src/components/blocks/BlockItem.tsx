@@ -1,107 +1,78 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { BlockInstruction } from "@/types";
+import { GripVertical, Minus, Plus, Trash2 } from "lucide-react";
+import { BlockShape, BlockSymbol } from "./BlockVisual";
+import { BLOCK_VISUALS } from "./blockDefinitions";
+import type { BlockInstruction, InstructionType } from "@/types";
 
 interface BlockItemProps {
   block: BlockInstruction;
   inEditor: boolean;
+  index?: number;
+  disabled?: boolean;
+  isDropTarget?: boolean;
   onRemove?: () => void;
-  onTimesChange?: (val: number) => void;
+  onTimesChange?: (value: number) => void;
 }
 
 export const BlockItem = ({
-  block,
-  inEditor,
-  onRemove,
-  onTimesChange,
+  block, inEditor, index = 0, disabled = false, isDropTarget = false, onRemove, onTimesChange,
 }: BlockItemProps) => {
-  const {
-    attributes,
-    listeners,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: block.id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  const handleTimesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = Math.max(1, parseInt(e.target.value) || 1);
-    if (block.type === "repeat") onTimesChange?.(v);
-  };
-
-  const typeLabels: Record<string, string> = {
-    move: "Avanzar",
-    turnLeft: "Girar izquierda",
-    turnRight: "Girar derecha",
-    repeat: "Repetir",
-  };
-
-  const typeColors: Record<string, string> = {
-    move: "bg-slate-800 border-slate-600 text-slate-300",
-    turnLeft: "bg-purple-600/20 border-purple-500/50 text-purple-400",
-    turnRight: "bg-purple-600/20 border-purple-500/50 text-purple-400",
-    repeat: "bg-orange-600/20 border-orange-500/50 text-orange-400",
-  };
-
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: block.id, disabled: disabled || !inEditor,
+  });
+  const visual = BLOCK_VISUALS[block.type];
   return (
-    <div
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`rounded-xl p-3 border shadow-soft cursor-grab active:cursor-grabbing transition-all ${
-        isDragging ? "opacity-50 scale-95" : ""
-      } ${typeColors[block.type]}`}
-    >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-medium">{typeLabels[block.type]}</span>
+    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`code-piece code-piece--${block.type} code-piece--program ${isDragging ? "code-piece--dragging" : ""} ${isDropTarget ? "code-piece--target" : ""}`}
+      data-disabled={disabled || undefined} data-gesture-block-id={block.id}>
+      <BlockShape type={block.type} />
+      <div className="code-piece__row">
+        <button type="button" ref={setActivatorNodeRef} {...attributes} {...listeners}
+          disabled={disabled} aria-label={`Mover instrucción ${index + 1}: ${visual.label}`}
+          className="code-piece__handle touch-none">
+          <GripVertical size={19} aria-hidden="true" />
+        </button>
+        <span className="code-piece__order" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+        <BlockSymbol type={block.type} />
+        <span className="code-piece__label">{visual.label}</span>
         {inEditor && (
-          <button
-            onClick={() => onRemove?.()}
-            className="text-slate-500 hover:text-red-400 transition-colors"
-            aria-label="Eliminar bloque"
-          >
-            ✕
-          </button>
+          <button type="button" onClick={onRemove} disabled={disabled} data-gesture-click aria-label={`Eliminar instrucción ${index + 1}: ${visual.label}`}
+            className="code-piece__delete"><Trash2 size={17} aria-hidden="true" /></button>
         )}
       </div>
-      {block.type === "repeat" && block.times !== undefined && (
-        <div className="flex items-center gap-2 mt-2">
-          <label className="text-xs text-slate-400">Veces:</label>
-          <input
-            type="number"
-            min="1"
-            max="20"
-            value={block.times}
-            onChange={handleTimesChange}
-            className="w-16 bg-slate-900 border border-slate-700 rounded text-center text-xs text-slate-200 focus:ring-2 focus:ring-electric-500"
-          />
+      {block.type === "repeat" && (
+        <div className="code-piece__loop-count">
+          <label htmlFor={`repeat-times-${block.id}`}>Repeticiones</label>
+          <span className="gesture-stepper">
+            <button type="button" data-gesture-click disabled={disabled || (block.times ?? 3) <= 1} aria-label={`Disminuir repeticiones de instrucción ${index + 1}`} onClick={() => onTimesChange?.(Math.max(1, (block.times ?? 3) - 1))}><Minus size={16} /></button>
+            <input id={`repeat-times-${block.id}`} type="number" inputMode="numeric" min={1} max={20} value={block.times ?? 3} disabled={disabled}
+              onChange={(event) => onTimesChange?.(Math.min(20, Math.max(1, parseInt(event.target.value) || 1)))} />
+            <button type="button" data-gesture-click disabled={disabled || (block.times ?? 3) >= 20} aria-label={`Aumentar repeticiones de instrucción ${index + 1}`} onClick={() => onTimesChange?.(Math.min(20, (block.times ?? 3) + 1))}><Plus size={16} /></button>
+          </span>
+          <span>veces</span>
         </div>
       )}
-    </div>
+    </li>
   );
 };
 
-export const BlockLibrary = ({ onAdd }: { onAdd: (type: string) => void }) => {
-  const blocks: { type: string; label: string; color: string }[] = [
-    { type: "move", label: "Avanzar", color: "bg-slate-800 border-slate-600 text-slate-300" },
-    { type: "turnLeft", label: "Girar izquierda", color: "bg-purple-600/20 border-purple-500/50 text-purple-400" },
-    { type: "turnRight", label: "Girar derecha", color: "bg-purple-600/20 border-purple-500/50 text-purple-400" },
-    { type: "repeat", label: "Repetir N veces", color: "bg-orange-600/20 border-orange-500/50 text-orange-400" },
-  ];
-
+export const BlockLibrary = ({ onAdd, disabled = false }: { onAdd: (type: InstructionType) => void; disabled?: boolean }) => {
+  const types: InstructionType[] = ["move", "turnLeft", "turnRight", "repeat"];
   return (
-    <div className="space-y-2">
-      {blocks.map((b) => (
-        <button
-          key={b.type}
-          onClick={() => onAdd(b.type)}
-          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border shadow-soft hover:bg-slate-700/50 transition-colors ${b.color} text-left`}
-        >
-          <span className="text-sm font-medium">{b.label}</span>
-          <span className="text-xs text-slate-500">+</span>
+    <div className="code-library">
+      {types.map((type) => (
+        <button type="button" key={type} disabled={disabled} aria-label={BLOCK_VISUALS[type].libraryLabel} data-gesture-type={type}
+          onClick={() => onAdd(type)} className={`code-piece code-piece--${type} code-piece--library`}>
+          <BlockShape type={type} />
+          <span className="code-piece__library-content">
+            <BlockSymbol type={type} />
+            <span className="code-piece__text">
+              <span className="code-piece__label">{BLOCK_VISUALS[type].label}</span>
+              <span className="code-piece__detail">{BLOCK_VISUALS[type].detail}</span>
+            </span>
+          </span>
+          <Plus size={12} className="code-piece__plus" aria-hidden="true" />
         </button>
       ))}
     </div>

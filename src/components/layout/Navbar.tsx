@@ -1,73 +1,55 @@
-import { useAppStore } from "@/store/appStore";
+import { useState } from "react";
+import { Link, NavLink } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import { useProgressStore } from "@/store/progressStore";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-
-const SCREENS: { id: string; label: string; path: string }[] = [
-  { id: "home", label: "Inicio", path: "/" },
-  { id: "levels", label: "Niveles", path: "/niveles" },
-  { id: "lab", label: "Laboratorio", path: "/laboratorio" },
-  { id: "results", label: "Resultados", path: "/resultados" },
-  { id: "achievements", label: "Reconocimientos", path: "/reconocimientos" },
-];
 
 export const Navbar = () => {
-  const { screen, setScreen } = useAppStore();
-  const { progress } = useProgressStore();
-
-  const goTo = (id: string) => {
-    setScreen(id as any);
-  };
+  const [menuOpen, setMenuOpen] = useState(false);
+  const progress = useProgressStore((state) => state.progress);
+  const links = [
+    { label: "Inicio", path: "/", end: true },
+    { label: "Niveles", path: "/niveles" },
+    { label: "Laboratorio", path: `/laboratorio/${Math.min(5, progress.currentLevel)}` },
+    { label: "Reconocimientos", path: "/reconocimientos" },
+  ];
+  const navigation = (mobile = false) => links.map((link) => (
+    <NavLink
+      key={link.label}
+      to={link.path}
+      end={link.end}
+      onClick={() => setMenuOpen(false)}
+      className={({ isActive }) => `flex min-h-11 items-center rounded-xl px-3 text-sm font-medium transition-colors ${
+        mobile ? "w-full" : ""
+      } ${isActive ? "bg-electric-500/10 text-electric-400" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
+    >
+      {link.label}
+    </NavLink>
+  ));
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-slate-900/90 backdrop-blur border-b border-slate-700 z-50">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <a
-          href="/"
-          onClick={(e) => {
-            e.preventDefault();
-            goTo("home");
-          }}
-          className="flex items-center gap-2"
-        >
-          <div className="w-8 h-8 bg-gradient-to-br from-electric-400 to-purple-500 rounded-lg flex items-center justify-center shadow-glow">
-            <span className="text-[10px] font-bold text-slate-900">CM</span>
-          </div>
-          <span className="font-bold text-xl tracking-tight text-white">
-            Code<span className="text-electric-400">Motion</span>
-          </span>
-        </a>
-
-        <div className="hidden md:flex items-center gap-1">
-          {SCREENS.map((s) => {
-            const active = screen === s.id;
-            return (
-              <Button
-                key={s.id}
-                variant="ghost"
-                onClick={() => goTo(s.id)}
-                className={
-                  active
-                    ? "bg-electric-500/20 text-electric-400 border-electric-500/50"
-                    : ""
-                }
-              >
-                {s.label}
-              </Button>
-            );
-          })}
-        </div>
-
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-700 bg-slate-900/95 backdrop-blur">
+      <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
+        <Link to="/" onClick={() => setMenuOpen(false)} className="flex min-h-11 shrink-0 items-center gap-2" aria-label="CodeMotion, inicio">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-electric-400 to-purple-500 text-[10px] font-bold text-slate-900">CM</span>
+          <span className="text-lg font-bold tracking-tight text-white sm:text-xl">Code<span className="text-electric-400">Motion</span></span>
+        </Link>
+        <nav aria-label="Navegación principal" className="hidden items-center gap-1 lg:flex">{navigation()}</nav>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex flex-col items-end">
-            <span className="text-xs text-slate-400">Puntos</span>
-            <span className="text-sm font-bold text-electric-400">
-              {progress.points}
-            </span>
-          </div>
-          <Badge variant="purple">{progress.badges.length} insignia(s)</Badge>
+          <span className="whitespace-nowrap text-xs text-slate-400"><strong className="text-sm text-electric-400">{progress.points}</strong> pts</span>
+          <span className="hidden rounded-lg bg-purple-500/10 px-3 py-2 text-xs text-purple-400 sm:inline">{progress.badges.length} insignias</span>
+          <button
+            type="button"
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 text-slate-200 lg:hidden"
+            aria-label={menuOpen ? "Cerrar navegación" : "Abrir navegación"}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </div>
-    </nav>
+      {menuOpen && <nav id="mobile-navigation" aria-label="Navegación móvil" className="space-y-1 border-t border-slate-700 p-3 shadow-soft lg:hidden">{navigation(true)}</nav>}
+    </header>
   );
 };

@@ -1,127 +1,65 @@
-import { useNavigate } from "react-router-dom";
-import { useAppStore } from "@/store/appStore";
+import { Link } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, Blocks, Flag, Hand, Medal, Play, Rocket, Sparkles, Trophy } from "lucide-react";
 import { useProgressStore } from "@/store/progressStore";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { ProgressIndicator } from "@/components/ui/ProgressIndicator";
-import { Play, Zap, Star } from "lucide-react";
+import { LEVELS } from "@/levels/data";
+import { ProgramDemo } from "@/components/home/ProgramDemo";
+import { MissionPath } from "@/components/home/MissionPath";
+import "@/components/home/home.css";
 
 export const HomeScreen = () => {
-  const navigate = useNavigate();
-  const { setScreen } = useAppStore();
-  const { progress } = useProgressStore();
-
-  const startLevel = (id: number) => {
-    setScreen("lab");
-    navigate(`/laboratorio/${id}`);
-  };
+  const progress = useProgressStore((state) => state.progress);
+  const reducedMotion = useReducedMotion();
+  const completed = LEVELS.filter((level) => progress.completedLevels.includes(level.id)).length;
+  const next = LEVELS.find((level) => !progress.completedLevels.includes(level.id));
+  const hasStarted = completed > 0;
 
   return (
-    <div className="space-y-8">
-      <div className="card">
-        <div className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="flex-1">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-              Bienvenido a CodeMotion
-            </h1>
-            <p className="text-slate-400 mb-4">
-              Aprende a programar un robot 3D con bloques visuales y gestos de
-              mano. Supera cinco desafíos progresivos.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Badge variant="electric">Bloques visuales</Badge>
-              <Badge variant="purple">Reconocimiento gestual</Badge>
-              <Badge variant="green">Three.js 3D</Badge>
-              <Badge variant="orange">Cinco niveles</Badge>
-            </div>
+    <div className="home-page">
+      <motion.section className="home-hero" aria-labelledby="home-title" initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+        <div className="home-hero__copy">
+          <span className="home-hero__eyebrow"><Sparkles size={15} aria-hidden="true" /> TU CENTRO DE MISIONES</span>
+          <h1 id="home-title">Tu próxima aventura empieza con <span>un bloque.</span></h1>
+          <p>Un robot, tus ideas y un mundo por descubrir. Construye instrucciones, supera desafíos y descubre todo lo que puedes crear.</p>
+          <div className="home-hero__actions">
+            <Link to={next ? `/laboratorio/${next.id}` : "/reconocimientos"} className="home-primary-link">
+              <Rocket size={21} aria-hidden="true" /> {next ? hasStarted ? "Continuar misión" : "Empezar aventura" : "Ver mis logros"}<ArrowRight size={18} aria-hidden="true" />
+            </Link>
+            <Link to="/niveles" className="home-secondary-link"><Flag size={18} aria-hidden="true" /> Seleccionar nivel</Link>
           </div>
-          <div className="w-full md:w-64 flex flex-col gap-3">
-            <Button variant="primary" onClick={() => startLevel(1)} className="w-full">
-              <Play className="w-5 h-5" /> Empezar desafío 1
-            </Button>
-            <Button variant="ghost" onClick={() => setScreen("levels")} className="w-full">
-              <Zap className="w-5 h-5" /> Seleccionar nivel
-            </Button>
-          </div>
+          <div className="home-hero__features"><span><Blocks size={16} aria-hidden="true" /> Aprende jugando</span><span><Hand size={16} aria-hidden="true" /> Con mouse o gestos</span></div>
+          <div className="home-hero__hint"><span className="home-hero__hint-icon"><Play size={16} fill="currentColor" aria-hidden="true" /></span><p>¿Tu primera vez?<strong> ¡Prueba los bloques antes de empezar!</strong></p></div>
+          <div className="home-hero__decoration" aria-hidden="true"><span>{"{ }"}</span><span>↻</span><span>→</span></div>
         </div>
-      </div>
+        <ProgramDemo />
+      </motion.section>
 
-      <div className="card">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Star className="w-5 h-5 text-electric-400" /> Tu progreso
-        </h2>
-        <ProgressIndicator
-          value={progress.completedLevels.length}
-          max={5}
-          label="Niveles completados"
-        />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-            <div className="text-xs text-slate-400">Niveles completados</div>
-            <div className="text-2xl font-bold text-electric-400">
-              {progress.completedLevels.length}
-            </div>
-          </div>
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-            <div className="text-xs text-slate-400">Puntos totales</div>
-            <div className="text-2xl font-bold text-white">{progress.points}</div>
-          </div>
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-            <div className="text-xs text-slate-400">Insignias</div>
-            <div className="text-2xl font-bold text-purple-400">
-              {progress.badges.length}
-            </div>
-          </div>
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-            <div className="text-xs text-slate-400">Nivel actual</div>
-            <div className="text-2xl font-bold text-white">
-              {progress.currentLevel}
-            </div>
+      <motion.section className="home-progress" aria-labelledby="home-progress-title" initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.12 }}>
+        <div className="home-progress__journey">
+          <span className="home-progress__icon"><Rocket size={24} aria-hidden="true" /></span>
+          <div><h2 id="home-progress-title">{completed === LEVELS.length ? "¡Todas las misiones superadas!" : hasStarted ? `¡Ya completaste ${completed} de ${LEVELS.length} misiones!` : "Tu gran aventura está por comenzar"}</h2>
+            <p>{next ? `Próxima misión: ${next.title}` : "Puedes volver a jugar y probar nuevas soluciones."}</p>
+            <div className="home-progress__bar" role="progressbar" aria-label="Misiones completadas" aria-valuemin={0} aria-valuemax={LEVELS.length} aria-valuenow={completed}><span style={{ width: `${completed / LEVELS.length * 100}%` }} /></div>
           </div>
         </div>
-      </div>
+        <div className="home-progress__stat"><Trophy size={22} aria-hidden="true" /><strong>{progress.points}</strong><span>Puntos ganados</span></div>
+        <Link to="/reconocimientos" className="home-progress__stat home-progress__stat--link" aria-label={`Ver mis ${progress.badges.length} insignias`}><Medal size={22} aria-hidden="true" /><strong>{progress.badges.length}<small> / {LEVELS.length}</small></strong><span>Mis insignias <ArrowRight size={12} aria-hidden="true" /></span></Link>
+      </motion.section>
 
-      <div className="card">
-        <h2 className="text-lg font-semibold text-white mb-4">Cómo jugar</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="flex gap-3">
-            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-electric-400">1</div>
-            <div>
-              <div className="font-medium text-white">Arrastra bloques</div>
-              <div className="text-sm text-slate-400">
-                Construye tu programa con los bloques de Avanzar, Girar y Repetir.
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-purple-400">2</div>
-            <div>
-              <div className="font-medium text-white">Ejecuta y observa</div>
-              <div className="text-sm text-slate-400">
-                Ejecuta el programa y mira al robot moverse en 3D.
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-green-400">3</div>
-            <div>
-              <div className="font-medium text-white">Llega a la meta</div>
-              <div className="text-sm text-slate-400">
-                El robot debe llegar realmente a la casilla meta.
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-orange-400">4</div>
-            <div>
-              <div className="font-medium text-white">Usa gestos (opcional)</div>
-              <div className="text-sm text-slate-400">
-                Controla todo también con tu cámara web y MediaPipe.
-              </div>
-            </div>
-          </div>
+      <motion.div initial={reducedMotion ? false : { opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.45 }}>
+        <MissionPath progress={progress} />
+        {next && <p className="home-next-reward"><Medal size={17} aria-hidden="true" /> Tu próxima insignia: <strong>{next.badge}</strong><span>· Completa «{next.title}» para conseguirla.</span></p>}
+      </motion.div>
+
+      <section className="home-discover" aria-labelledby="home-discover-title">
+        <div className="home-section-heading"><div><span className="home-eyebrow">NO NECESITAS SABER PROGRAMAR</span><h2 id="home-discover-title">Solo necesitas curiosidad.</h2></div></div>
+        <div className="home-learning-grid">
+          <article><span className="home-learning-icon home-learning-icon--blue"><Blocks size={26} aria-hidden="true" /></span><span className="home-learning-number">01</span><h3>Imagina y construye</h3><p>Combina piezas para decirle al robot qué hacer. ¡Cada bloque es una idea!</p></article>
+          <article><span className="home-learning-icon home-learning-icon--purple"><Play size={26} aria-hidden="true" /></span><span className="home-learning-number">02</span><h3>Prueba y descubre</h3><p>Observa cómo se mueve. Si algo no sale, cambia un bloque y vuelve a probar.</p></article>
+          <article><span className="home-learning-icon home-learning-icon--orange"><Medal size={26} aria-hidden="true" /></span><span className="home-learning-number">03</span><h3>Celebra cada logro</h3><p>Alcanza la meta, desbloquea misiones y consigue tus propias insignias.</p></article>
         </div>
-      </div>
+        <p className="home-access-note"><Hand size={18} aria-hidden="true" /> Juega con el mouse o tocando la pantalla. Si quieres usar gestos, activa la cámara dentro del laboratorio.</p>
+      </section>
     </div>
   );
 };
