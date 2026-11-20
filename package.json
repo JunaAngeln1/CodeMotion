@@ -3,9 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "26.x"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run check:build",
+    "check:build": "node scripts/check-build.mjs",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview"

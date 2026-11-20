@@ -2,7 +2,16 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      const redirect = sessionStorage.getItem("github-pages-redirect");
+      if (redirect) {
+        sessionStorage.removeItem("github-pages-redirect");
+        if (redirect.startsWith("/CodeMotion/")) {
+          history.replaceState(null, "", redirect);
+        }
+      }
+    </script>
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>CodeMotion · Aprende a programar</title>
   </head>

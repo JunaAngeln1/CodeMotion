@@ -18,7 +18,7 @@ CodeMotion es una aplicación web educativa para aprender lógica y secuencias d
 
 ## Requisitos
 
-- Node.js compatible con Vite 8
+- Node.js 26.x (fijado en `package.json` y `.nvmrc`)
 - npm
 - Navegador moderno
 
@@ -47,6 +47,63 @@ npm run lint
 npm run test
 npm run preview
 ```
+
+## Publicar en GitHub Pages
+
+El workflow [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) ejecuta las pruebas, el análisis estático y la compilación en cada push a `main`, y publica automáticamente el sitio en GitHub Pages. También se puede iniciar manualmente desde la pestaña **Actions**.
+
+Para habilitarlo en el repositorio:
+
+1. Sube los cambios a la rama `main`, incluido `package-lock.json`.
+2. En GitHub, abre **Settings → Pages** y selecciona **GitHub Actions** como método de publicación.
+3. En **Actions**, espera a que termine correctamente **Deploy to GitHub Pages**. El sitio quedará disponible en `https://junaangeln1.github.io/CodeMotion/`.
+
+La compilación de Pages usa la subruta `/CodeMotion/`; las rutas internas también funcionan al abrirlas o recargarlas directamente. El archivo `public/404.html` permite esa compatibilidad con el alojamiento estático de Pages. Para probar de forma local, ejecuta `npm run build` y `npm run preview`; la compilación local usa la raíz `/`, mientras que el workflow genera las rutas de GitHub Pages.
+
+## Desplegar en Vercel
+
+El proyecto se despliega como **sitio estático Vite**, sin backend, funciones ni servidor permanente. `vercel.json` configura la compilación y las rutas SPA para que abrir o recargar `/niveles`, `/laboratorio/1`, `/resultados` y `/reconocimientos` no produzca un 404.
+
+1. Sube al repositorio los archivos de preparación del despliegue, incluido `vercel.json` y el `package-lock.json` actualizado.
+2. En [Vercel](https://vercel.com/new), elige **Add New → Project**, conecta GitHub e importa **JunaAngeln1/CodeMotion**.
+3. Usa estos valores (los principales ya se toman de `vercel.json`):
+
+   | Ajuste | Valor |
+   | --- | --- |
+   | Production Branch | `main` |
+   | Root Directory | Raíz del repositorio (`./`) |
+   | Framework Preset | `Vite` |
+   | Node.js | `26.x` |
+   | Install Command | `npm ci` |
+   | Build Command | `npm run build` |
+   | Output Directory | `dist` |
+   | Variables de entorno | Ninguna necesaria |
+
+4. Pulsa **Deploy** y abre la URL **HTTPS** que entregue Vercel. No añadas `:5173` ni `:4173`: esos puertos son solo para desarrollo local. No utilices `npm run dev` o `npm run preview` como comando de despliegue.
+
+### Cámara, permisos y progreso en producción
+
+- Abre la URL HTTPS directamente en Chrome, Safari u otro navegador compatible, no dentro de un iframe ni de un navegador integrado de mensajería. En el teléfono, entra al laboratorio y activa la cámara manualmente.
+- La política de permisos permite la cámara del propio sitio y deshabilita micrófono y geolocalización. HTTPS permite solicitar el permiso, pero no garantiza compatibilidad ni precisión en todos los dispositivos.
+- MediaPipe y su WASM se publican en `dist/assets`. El modelo oficial se descarga por HTTPS desde Google al activar la cámara; hace falta conexión y la primera carga puede tardar. No se envían imágenes ni grabaciones.
+- El progreso de LocalStorage pertenece a cada navegador y dominio. El progreso de `localhost` no se transfiere al dominio de Vercel y una URL de preview distinta tendrá su propio progreso.
+- Los recursos con hash de `/assets/` tienen caché larga; el HTML no recibe esa regla. No se necesitan tokens ni secretos `VITE_*` para esta versión.
+
+### Verificación antes de desplegar
+
+```bash
+npm ci
+npm run test
+npm run lint
+npm run build
+npm run preview
+```
+
+La compilación incluye `npm run check:build`, que comprueba los recursos referenciados por el HTML y la presencia del cargador y del binario WASM válidos. `preview` permite revisar el build localmente, pero las reglas y cabeceras de `vercel.json` deben comprobarse también en la URL publicada.
+
+Después del despliegue, prueba la navegación, recarga una URL de laboratorio directamente, completa un nivel y recarga para comprobar el progreso. Activa y apaga la cámara desde un teléfono y revisa que los archivos `.wasm` respondan como `application/wasm`, no como HTML.
+
+**Diagnóstico:** si falla `npm ci`, comprueba que el lockfile esté subido y que Vercel use Node 26.x. Si aparece 404 al recargar rutas, revisa que `vercel.json` esté en la Root Directory. Si aparece 502, confirma el preset `Vite`, la salida `dist` y que no se esté intentando ejecutar un servidor de desarrollo o un proxy al PC.
 
 ## Estado funcional
 
